@@ -6,9 +6,9 @@ export const createUser = async (name, email, password) => {
       "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *",
       [name, email, password]
     );
-    return result.rows[0]; // Retorna o usuário recém-criado
+    return result.rows[0];
   } catch (error) {
-    console.error("Erro ao criar usuário:", error); // Exibir o erro real no console
+    console.error("Erro ao criar usuário:", error);
     throw new Error("Erro no servidor");
   }
 };
@@ -19,6 +19,7 @@ export const getUser = async () => {
     return result.rows;
   } catch (err) {
     console.error("Erro ao buscar usuários", err);
+
     throw new Error("Erro no servidor");
   }
 };

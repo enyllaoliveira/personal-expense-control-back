@@ -1,4 +1,3 @@
-import express from "express";
 import bcrypt from "bcrypt";
 
 import {
@@ -90,6 +89,7 @@ export const updateUserController = async (req, res) => {
   }
 };
 
+// maquear o usuário, não o apagar
 export const deleteUserController = async (req, res) => {
   const { id } = req.params;
   try {
