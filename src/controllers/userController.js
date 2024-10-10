@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-
+import jwt from "jsonwebtoken";
 import {
   createUser,
   getUser,
@@ -43,14 +43,41 @@ export const getUserByEmailController = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Usuário não encontrado" });
     }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Senha inválida" });
     }
 
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    const refreshToken = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 1000 * 60 * 60,
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
+
     res.status(200).json({
       message: "Login realizado com sucesso",
-      user,
+      user: { id: user.id, email: user.email },
     });
   } catch (error) {
     res.status(500).json({
@@ -59,7 +86,6 @@ export const getUserByEmailController = async (req, res) => {
     });
   }
 };
-
 export const getUserByIdController = async (req, res) => {
   const { id } = req.params;
   try {
