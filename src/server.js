@@ -1,4 +1,5 @@
 import express from "express";
+import incomeRoutes from "./routes/incomeRoutes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import jwt from "jsonwebtoken";
@@ -18,6 +19,7 @@ app.use(
     credentials: true,
   })
 );
+app.use("/api", incomeRoutes);
 
 app.use("/api", userRoutes);
 
