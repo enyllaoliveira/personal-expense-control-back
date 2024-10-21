@@ -1,5 +1,7 @@
 import express from "express";
 import incomeRoutes from "./routes/incomeRoutes.js";
+import expensesRoutes from "./routes/expensesRoutes.js";
+import categoriesRoutes from "./routes/categoriesRoutes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import jwt from "jsonwebtoken";
@@ -19,6 +21,11 @@ app.use(
     credentials: true,
   })
 );
+
+app.use("/api", expensesRoutes);
+
+app.use("/api", categoriesRoutes);
+
 app.use("/api", incomeRoutes);
 
 app.use("/api", userRoutes);
