@@ -1,31 +1,34 @@
 import express from "express";
 import { query } from "../db/index.js";
+import { verifyToken } from "./userRoutes.js";
 
 const router = express.Router();
 
-router.post("/categorias", async (req, res) => {
+router.post("/categorias", verifyToken, async (req, res) => {
   const { nome, tipo, descricao_extra } = req.body;
+  const userId = req.userId;
 
-  if (!nome || !tipo) {
-    return res
-      .status(400)
-      .json({ message: "Os campos 'nome' e 'tipo' são obrigatórios." });
+  if (!userId) {
+    return res.status(400).json({ message: "ID do usuário é obrigatório." });
   }
 
   try {
-    const checkQuery = `SELECT * FROM categorias WHERE nome = $1`;
-    const checkResult = await query(checkQuery, [nome]);
+    const checkQuery = `
+      SELECT * FROM categorias WHERE nome = $1 AND user_id = $2;
+    `;
+    const checkResult = await query(checkQuery, [nome, userId]);
 
     if (checkResult.rows.length > 0) {
-      return res.status(400).json({ message: "Categoria já existe." });
+      return res
+        .status(400)
+        .json({ message: "Categoria já existe para este usuário." });
     }
 
     const sqlQuery = `
-      INSERT INTO categorias (nome, tipo, descricao_extra, criado_em)
-      VALUES ($1, $2, $3, NOW())
-      RETURNING *;
+      INSERT INTO categorias (nome, tipo, descricao_extra, user_id, criado_em)
+      VALUES ($1, $2, $3, $4, NOW()) RETURNING *;
     `;
-    const values = [nome, tipo, descricao_extra];
+    const values = [nome, tipo, descricao_extra, userId];
     const result = await query(sqlQuery, values);
 
     res.status(201).json(result.rows[0]);
@@ -35,7 +38,7 @@ router.post("/categorias", async (req, res) => {
   }
 });
 
-router.get("/categorias/:id", async (req, res) => {
+router.get("/categorias/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -50,11 +53,10 @@ router.get("/categorias/:id", async (req, res) => {
   }
 });
 
-router.put("/despesas/:id", async (req, res) => {
+router.put("/despesas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { descricao, valor, data_pagamento, categoria_id } = req.body;
 
-  // Validação dos campos obrigatórios
   if (!descricao || !valor || !data_pagamento || !categoria_id) {
     return res.status(400).json({
       message: "Todos os campos são obrigatórios.",
@@ -86,7 +88,7 @@ router.put("/despesas/:id", async (req, res) => {
   }
 });
 
-router.delete("/categorias/:id", async (req, res) => {
+router.delete("/categorias/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -114,7 +116,7 @@ router.delete("/categorias/:id", async (req, res) => {
   }
 });
 
-router.get("/categorias", async (req, res) => {
+router.get("/categorias", verifyToken, async (req, res) => {
   try {
     const result = await query("SELECT * FROM categorias ORDER BY nome DESC");
     res.status(200).json(result.rows);

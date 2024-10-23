@@ -1,44 +1,69 @@
 import express from "express";
 import { query } from "../db/index.js";
+import { verifyToken } from "./userRoutes.js";
 
 const router = express.Router();
 
-router.post("/despesas", async (req, res) => {
+router.post("/despesas", verifyToken, async (req, res) => {
   const { valor, descricao, data_pagamento, categoria_id, nova_categoria } =
     req.body;
+  const userId = req.userId;
+
+  console.log("Payload recebido no backend:", req.body);
+  if (!userId) {
+    return res.status(400).json({ message: "ID do usuário é obrigatório." });
+  }
 
   try {
     let categoriaId = categoria_id;
 
     if (nova_categoria) {
-      const novaCategoria = await query(
-        "INSERT INTO categorias (nome, tipo, descricao_extra) VALUES ($1, 'despesa', false) RETURNING id",
-        [nova_categoria]
-      );
-      categoriaId = novaCategoria.rows[0].id;
+      console.log("Criando nova categoria:", nova_categoria);
+      const categoriaQuery = `
+        INSERT INTO categorias (nome, tipo, descricao_extra, criado_em) 
+        VALUES ($1, 'despesa', false, NOW()) RETURNING id;
+      `;
+      const categoriaResult = await query(categoriaQuery, [nova_categoria]);
+
+      if (categoriaResult.rows.length > 0) {
+        categoriaId = categoriaResult.rows[0].id;
+        console.log("Nova categoria criada com ID:", categoriaId);
+      } else {
+        return res.status(500).json({ message: "Erro ao criar categoria." });
+      }
     }
 
-    const novaDespesa = await query(
-      "INSERT INTO despesas (valor, descricao, data_pagamento, categoria_id) VALUES ($1, $2, $3, $4) RETURNING *",
-      [valor, descricao, data_pagamento, categoriaId]
-    );
+    const sqlQuery = `
+      INSERT INTO despesas (user_id, valor, descricao, data_pagamento, categoria_id, criado_em, atualizado_em) 
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *;
+    `;
+    const values = [userId, valor, descricao, data_pagamento, categoriaId];
+    const result = await query(sqlQuery, values);
 
-    res.status(201).json(novaDespesa.rows[0]);
-  } catch (err) {
-    console.error("Erro ao criar despesa:", err.message);
-    res.status(500).json({ error: "Erro ao criar despesa." });
+    console.log("Despesa criada com sucesso:", result.rows[0]);
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error("Erro ao adicionar despesa:", error.message);
+    res.status(500).json({ message: "Erro no servidor." });
   }
 });
-
-router.get("/despesas/:id", async (req, res) => {
+router.get("/despesas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
+  const userId = req.userId;
 
   try {
-    const result = await query("SELECT * FROM despesas WHERE id = $1", [id]);
+    const queryText = `
+      SELECT * FROM despesas WHERE id = $1 AND usuario_id = $2;
+    `;
+    const result = await query(queryText, [id, userId]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Despesa não encontrada." });
+      return res
+        .status(404)
+        .json({ message: "Despesa não encontrada ou não autorizada." });
     }
+
     res.status(200).json(result.rows[0]);
   } catch (error) {
     console.error("Erro ao buscar despesa por ID:", error.message);
@@ -46,7 +71,7 @@ router.get("/despesas/:id", async (req, res) => {
   }
 });
 
-router.put("/despesas/:id", async (req, res) => {
+router.put("/despesas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { descricao, valor, data_pagamento, categoria_id } = req.body;
 
@@ -80,7 +105,7 @@ router.put("/despesas/:id", async (req, res) => {
       .json({ message: "Erro no servidor.", error: error.message });
   }
 });
-router.delete("/despesas/:id", async (req, res) => {
+router.delete("/despesas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -106,16 +131,26 @@ router.delete("/despesas/:id", async (req, res) => {
     });
   }
 });
+router.get("/despesas", verifyToken, async (req, res) => {
+  const { userId } = req.query;
 
-router.get("/despesas", async (req, res) => {
+  if (!userId) {
+    return res.status(400).json({ message: "ID do usuário é obrigatório." });
+  }
+
   try {
-    const result = await query(
-      "SELECT * FROM despesas ORDER BY data_pagamento DESC"
-    );
+    const result = await query("SELECT * FROM despesas WHERE user_id = $1", [
+      userId,
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Nenhuma despesa encontrada." });
+    }
+
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ erro: "Erro ao buscar despesas." });
+    console.error("Erro ao buscar despesas:", error.message);
+    res.status(500).json({ message: "Erro no servidor." });
   }
 });
 

@@ -75,12 +75,13 @@ export const getUserByEmailController = async (req, res) => {
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Login realizado com sucesso",
       user: { id: user.id, email: user.email },
+      token,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Erro ao tentar realizar login",
       error: error.message,
     });

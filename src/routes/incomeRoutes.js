@@ -1,39 +1,39 @@
 import express from "express";
 import dotenv from "dotenv";
 import { query } from "../db/index.js";
+import { verifyToken } from "../routes/userRoutes.js";
 
 dotenv.config();
 
 const router = express.Router();
 
-router.get("/receitas", async (req, res) => {
-  const { userId } = req.query;
-
+router.get("/receitas", verifyToken, async (req, res) => {
+  const userId = req.userId;
+  if (!userId) {
+    return res.status(400).json({ message: "ID do usuário é obrigatório." });
+  }
   try {
-    const result = await query("SELECT * FROM receitas WHERE user_id = $1", [
-      userId,
-    ]);
+    const result = await query(
+      "SELECT * FROM receitas WHERE user_id = $1 ORDER BY date DESC",
+      [userId]
+    );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Receita não encontrada" });
+      return res.status(200).json([]);
     }
 
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Erro ao buscar receita", error.message);
-    res.status(500).json({
-      message: "Erro no servidor",
-      error: error.message,
-    });
+    console.error("Erro ao buscar receitas:", error.message);
+    res.status(500).json({ message: "Erro no servidor." });
   }
 });
+router.post("/receitas", verifyToken, async (req, res) => {
+  const { amount, description, receipt_date } = req.body;
+  const userId = req.userId;
 
-router.post("/receitas", async (req, res) => {
-  const { userId, amount, description, receipt_date } = req.body;
-  if (!userId || !amount || !description || !receipt_date) {
-    return res
-      .status(400)
-      .json({ message: "Todos os campos são obrigatórios." });
+  if (!userId) {
+    return res.status(400).json({ message: "ID do usuário é obrigatório." });
   }
 
   try {
@@ -41,20 +41,17 @@ router.post("/receitas", async (req, res) => {
       INSERT INTO receitas (user_id, amount, description, date, created_at, updated_at)
       VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING *;
     `;
+
     const values = [userId, amount, description, receipt_date];
     const result = await query(sqlQuery, values);
 
-    res.status(201).json({
-      message: "Receita adicionada com sucesso!",
-      receita: result.rows[0],
-    });
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error("Erro ao adicionar receita:", error.message);
-    res.status(500).json({ message: "Erro no servidor", error: error.message });
+    res.status(500).json({ message: "Erro no servidor." });
   }
 });
-
-router.put("/receitas/:id", async (req, res) => {
+router.put("/receitas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { amount, description, receipt_date } = req.body;
 
@@ -88,7 +85,7 @@ router.put("/receitas/:id", async (req, res) => {
   }
 });
 
-router.delete("/receitas/:id", async (req, res) => {
+router.delete("/receitas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -112,7 +109,7 @@ router.delete("/receitas/:id", async (req, res) => {
   }
 });
 
-router.get("/", (req, res) => {
+router.get("/", verifyToken, (req, res) => {
   res.send("Rota de receitas está funcionando!");
 });
 
