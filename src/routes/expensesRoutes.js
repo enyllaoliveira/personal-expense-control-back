@@ -75,21 +75,52 @@ router.put("/despesas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { descricao, valor, data_pagamento, categoria_id } = req.body;
 
-  if (!descricao || !valor || !data_pagamento || !categoria_id) {
-    return res
-      .status(400)
-      .json({ message: "Todos os campos são obrigatórios." });
+  if (
+    descricao == undefined &&
+    valor == undefined &&
+    data_pagamento == undefined &&
+    categoria_id == undefined
+  ) {
+    return res.status(400).json({ message: "Nenhum campo foi alterado." });
   }
 
   try {
+    const fields = [];
+    const values = [];
+    let index = 1;
+
+    if (descricao !== undefined) {
+      fields.push(`descricao = $${index++}`);
+      values.push(descricao);
+    }
+
+    if (valor !== undefined) {
+      fields.push(`valor = $${index++}`);
+      values.push(parseFloat(valor));
+    }
+
+    if (data_pagamento !== undefined) {
+      const parsedDate = new Date(data_pagamento);
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ message: "Data de pagamento inválida." });
+      }
+      fields.push(`data_pagamento = $${index++}`);
+      values.push(parsedDate);
+    }
+
+    if (categoria_id !== undefined) {
+      fields.push(`categoria_id = $${index++}`);
+      values.push(categoria_id);
+    }
+
+    values.push(id);
+
     const sqlQuery = `
       UPDATE despesas
-      SET descricao = $1, valor = $2, data_pagamento = $3, categoria_id = $4, atualizado_em = NOW()
-      WHERE id = $5
+      SET ${fields.join(", ")}, atualizado_em = NOW()
+      WHERE id = $${index}
       RETURNING *;
     `;
-
-    const values = [descricao, valor, data_pagamento, categoria_id, id];
 
     const result = await query(sqlQuery, values);
 
@@ -97,9 +128,12 @@ router.put("/despesas/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Despesa não encontrada." });
     }
 
-    res.status(200).json(result.rows[0]);
+    res.status(200).json({
+      message: "Despesa atualizada com sucesso.",
+      despesa: result.rows[0],
+    });
   } catch (error) {
-    console.error("Erro ao atualizar despesa:", error);
+    console.error("Erro ao atualizar despesa:", error.message);
     res
       .status(500)
       .json({ message: "Erro no servidor.", error: error.message });

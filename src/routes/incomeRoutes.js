@@ -54,21 +54,43 @@ router.post("/receitas", verifyToken, async (req, res) => {
 router.put("/receitas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { amount, description, receipt_date } = req.body;
-
-  if (!amount || !description || !receipt_date) {
+  if (
+    amount === undefined &&
+    description === undefined &&
+    receipt_date === undefined
+  ) {
     return res
       .status(400)
-      .json({ message: "Todos os campos são obrigatórios." });
+      .json({ message: "Pelo menos um campo deve ser atualizado." });
   }
 
   try {
+    const fields = [];
+    const values = [];
+    let index = 1;
+
+    if (amount !== undefined) {
+      fields.push(`amount = $${index++}`);
+      values.push(parseFloat(amount));
+    }
+    if (description !== undefined) {
+      fields.push(`description = $${index++}`);
+      values.push(description);
+    }
+    if (receipt_date !== undefined) {
+      fields.push(`date = $${index++}`);
+      values.push(receipt_date);
+    }
+
+    values.push(id);
+
     const sqlQuery = `
       UPDATE receitas
-      SET amount = $1, description = $2, date = $3, updated_at = NOW()
-      WHERE id = $4
+      SET ${fields.join(", ")}, updated_at = NOW()
+      WHERE id = $${index}
       RETURNING *;
     `;
-    const values = [amount, description, receipt_date, id];
+
     const result = await query(sqlQuery, values);
 
     if (result.rows.length === 0) {
