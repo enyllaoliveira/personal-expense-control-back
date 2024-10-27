@@ -5,46 +5,76 @@ import { verifyToken } from "./userRoutes.js";
 const router = express.Router();
 
 router.post("/despesas", verifyToken, async (req, res) => {
-  const { valor, descricao, data_pagamento, categoria_id, nova_categoria } =
-    req.body;
+  const despesas = req.body;
   const userId = req.userId;
 
-  console.log("Payload recebido no backend:", req.body);
+  if (!Array.isArray(despesas) || despesas.length === 0) {
+    return res.status(400).json({ message: "Dados inválidos." });
+  }
+
+  const camposInvalidos = despesas.some(
+    (despesa) =>
+      !despesa.usuario_id ||
+      !despesa.categoria_id ||
+      !despesa.data_pagamento ||
+      !despesa.descricao ||
+      !despesa.tipo_pagamento ||
+      !despesa.valor
+  );
+
+  if (camposInvalidos) {
+    return res
+      .status(400)
+      .json({ message: "Todos os campos são obrigatórios." });
+  }
+
   if (!userId) {
     return res.status(400).json({ message: "ID do usuário é obrigatório." });
   }
 
   try {
-    let categoriaId = categoria_id;
+    const categoriaIds = despesas.map((d) => parseInt(d.categoria_id, 10));
+    const categoriasResult = await query(
+      `SELECT id FROM categorias WHERE id = ANY($1::int[])`,
+      [categoriaIds]
+    );
 
-    if (nova_categoria) {
-      console.log("Criando nova categoria:", nova_categoria);
-      const categoriaQuery = `
-        INSERT INTO categorias (nome, tipo, descricao_extra, criado_em) 
-        VALUES ($1, 'despesa', false, NOW()) RETURNING id;
-      `;
-      const categoriaResult = await query(categoriaQuery, [nova_categoria]);
+    const categoriasValidas = categoriasResult.rows.map((row) => row.id);
+    const categoriasInvalidas = categoriaIds.some(
+      (id) => !categoriasValidas.includes(id)
+    );
 
-      if (categoriaResult.rows.length > 0) {
-        categoriaId = categoriaResult.rows[0].id;
-        console.log("Nova categoria criada com ID:", categoriaId);
-      } else {
-        return res.status(500).json({ message: "Erro ao criar categoria." });
-      }
+    if (categoriasInvalidas) {
+      return res.status(400).json({ message: "Categoria não encontrada." });
     }
 
     const sqlQuery = `
-      INSERT INTO despesas (user_id, valor, descricao, data_pagamento, categoria_id, criado_em, atualizado_em) 
-      VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *;
+      INSERT INTO despesas (
+        user_id, descricao, valor, data_pagamento, categoria_id, tipo_pagamento, criado_em, atualizado_em
+      ) VALUES ${despesas
+        .map(
+          (_, i) =>
+            `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}, $${
+              i * 7 + 5
+            }, $${i * 7 + 6}, NOW(), NOW())`
+        )
+        .join(", ")}
+      RETURNING *;
     `;
-    const values = [userId, valor, descricao, data_pagamento, categoriaId];
+
+    const values = despesas.flatMap((despesa) => [
+      userId,
+      despesa.descricao,
+      parseFloat(despesa.valor),
+      despesa.data_pagamento,
+      parseInt(despesa.categoria_id, 10),
+      despesa.tipo_pagamento || "comum",
+    ]);
+
     const result = await query(sqlQuery, values);
 
-    console.log("Despesa criada com sucesso:", result.rows[0]);
-
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(result.rows);
   } catch (error) {
-    console.error("Erro ao adicionar despesa:", error.message);
     res.status(500).json({ message: "Erro no servidor." });
   }
 });
@@ -73,18 +103,57 @@ router.get("/despesas/:id", verifyToken, async (req, res) => {
 
 router.put("/despesas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
-  const { descricao, valor, data_pagamento, categoria_id } = req.body;
+  const {
+    descricao,
+    valor,
+    data_pagamento,
+    categoria_id,
+    nova_categoria,
+    tipo_pagamento,
+  } = req.body;
 
   if (
-    descricao == undefined &&
-    valor == undefined &&
-    data_pagamento == undefined &&
-    categoria_id == undefined
+    descricao === undefined &&
+    valor === undefined &&
+    data_pagamento === undefined &&
+    categoria_id === undefined &&
+    tipo_pagamento === undefined
   ) {
     return res.status(400).json({ message: "Nenhum campo foi alterado." });
   }
 
   try {
+    let categoriaId = categoria_id;
+
+    if (nova_categoria) {
+      console.log("Verificando se a categoria já existe:", nova_categoria);
+      const categoriaExistenteQuery = `
+        SELECT id FROM categorias WHERE nome = $1;
+      `;
+      const categoriaExistenteResult = await query(categoriaExistenteQuery, [
+        nova_categoria,
+      ]);
+
+      if (categoriaExistenteResult.rows.length > 0) {
+        categoriaId = categoriaExistenteResult.rows[0].id;
+        console.log("Categoria já existente com ID:", categoriaId);
+      } else {
+        console.log("Criando nova categoria:", nova_categoria);
+        const categoriaQuery = `
+          INSERT INTO categorias (nome, tipo, descricao_extra, criado_em) 
+          VALUES ($1, 'despesa', false, NOW()) RETURNING id;
+        `;
+        const categoriaResult = await query(categoriaQuery, [nova_categoria]);
+
+        if (categoriaResult.rows.length > 0) {
+          categoriaId = categoriaResult.rows[0].id;
+          console.log("Nova categoria criada com ID:", categoriaId);
+        } else {
+          return res.status(500).json({ message: "Erro ao criar categoria." });
+        }
+      }
+    }
+
     const fields = [];
     const values = [];
     let index = 1;
@@ -108,9 +177,14 @@ router.put("/despesas/:id", verifyToken, async (req, res) => {
       values.push(parsedDate);
     }
 
-    if (categoria_id !== undefined) {
+    if (categoriaId !== undefined) {
       fields.push(`categoria_id = $${index++}`);
-      values.push(categoria_id);
+      values.push(categoriaId);
+    }
+
+    if (tipo_pagamento !== undefined) {
+      fields.push(`tipo_pagamento = $${index++}`);
+      values.push(tipo_pagamento);
     }
 
     values.push(id);
