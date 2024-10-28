@@ -19,7 +19,9 @@ router.post("/despesas", verifyToken, async (req, res) => {
       !despesa.data_pagamento ||
       !despesa.descricao ||
       !despesa.tipo_pagamento ||
-      !despesa.valor
+      !despesa.valor ||
+      !despesa.numero_parcelas ||
+      despesa.parcela_atual == null
   );
 
   if (camposInvalidos) {
@@ -28,53 +30,39 @@ router.post("/despesas", verifyToken, async (req, res) => {
       .json({ message: "Todos os campos são obrigatórios." });
   }
 
-  if (!userId) {
-    return res.status(400).json({ message: "ID do usuário é obrigatório." });
-  }
-
   try {
-    const categoriaIds = despesas.map((d) => parseInt(d.categoria_id, 10));
-    const categoriasResult = await query(
-      `SELECT id FROM categorias WHERE id = ANY($1::int[])`,
-      [categoriaIds]
-    );
-
-    const categoriasValidas = categoriasResult.rows.map((row) => row.id);
-    const categoriasInvalidas = categoriaIds.some(
-      (id) => !categoriasValidas.includes(id)
-    );
-
-    if (categoriasInvalidas) {
-      return res.status(400).json({ message: "Categoria não encontrada." });
-    }
-
     const sqlQuery = `
       INSERT INTO despesas (
-        user_id, descricao, valor, data_pagamento, categoria_id, tipo_pagamento, criado_em, atualizado_em
+        descricao, valor, data_pagamento, categoria_id, 
+        user_id, tipo_pagamento, numero_parcelas, parcela_atual
       ) VALUES ${despesas
         .map(
           (_, i) =>
-            `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}, $${
-              i * 7 + 5
-            }, $${i * 7 + 6}, NOW(), NOW())`
+            `($${i * 8 + 1}, $${i * 8 + 2}, $${i * 8 + 3}, $${i * 8 + 4}, 
+               $${i * 8 + 5}, $${i * 8 + 6}, $${i * 8 + 7}, $${i * 8 + 8})`
         )
         .join(", ")}
       RETURNING *;
     `;
 
     const values = despesas.flatMap((despesa) => [
-      userId,
       despesa.descricao,
       parseFloat(despesa.valor),
       despesa.data_pagamento,
       parseInt(despesa.categoria_id, 10),
+      userId,
       despesa.tipo_pagamento || "comum",
+      parseInt(despesa.numero_parcelas, 10),
+      parseInt(despesa.parcela_atual, 10),
     ]);
+
+    console.log("Valores enviados para a query:", values);
 
     const result = await query(sqlQuery, values);
 
     res.status(201).json(result.rows);
   } catch (error) {
+    console.error("Erro ao criar despesas:", error.message);
     res.status(500).json({ message: "Erro no servidor." });
   }
 });

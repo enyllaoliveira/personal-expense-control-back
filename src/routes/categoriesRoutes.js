@@ -14,8 +14,9 @@ router.post("/categorias", verifyToken, async (req, res) => {
 
   try {
     const checkQuery = `
-      SELECT * FROM categorias WHERE nome = $1 AND user_id = $2;
-    `;
+    SELECT * FROM categorias 
+    WHERE nome = $1 AND (user_id = $2 OR user_id IS NULL);
+  `;
     const checkResult = await query(checkQuery, [nome, userId]);
 
     if (checkResult.rows.length > 0) {
@@ -25,9 +26,9 @@ router.post("/categorias", verifyToken, async (req, res) => {
     }
 
     const sqlQuery = `
-      INSERT INTO categorias (nome, tipo, descricao_extra, user_id, criado_em)
-      VALUES ($1, $2, $3, $4, NOW()) RETURNING *;
-    `;
+    INSERT INTO categorias (nome, tipo, descricao_extra, user_id, criado_em)
+    VALUES ($1, $2, $3, $4, NOW()) RETURNING *;
+  `;
     const values = [nome, tipo, descricao_extra, userId];
     const result = await query(sqlQuery, values);
 
@@ -35,21 +36,6 @@ router.post("/categorias", verifyToken, async (req, res) => {
   } catch (error) {
     console.error("Erro ao criar categoria:", error.message);
     res.status(500).json({ message: "Erro ao criar categoria." });
-  }
-});
-
-router.get("/categorias/:id", verifyToken, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const result = await query("SELECT * FROM categorias where id = $1", [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Categoria não encontrada." });
-    }
-    res.status(200).json(result.rows[0]);
-  } catch (error) {
-    console.error("Erro ao buscar categoria por ID:", error.message);
-    res.status(500).json({ message: "Erro no servidor", error: error.message });
   }
 });
 
@@ -117,12 +103,20 @@ router.delete("/categorias/:id", verifyToken, async (req, res) => {
 });
 
 router.get("/categorias", verifyToken, async (req, res) => {
+  const userId = req.userId;
+
   try {
-    const result = await query("SELECT * FROM categorias ORDER BY nome DESC");
+    const queryCategorias = `
+      SELECT * 
+      FROM categorias 
+      WHERE user_id IS NULL OR user_id = $1
+    `;
+    const result = await query(queryCategorias, [userId]);
+
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ erro: "Erro ao buscar categorias." });
+    console.error("Erro ao buscar categorias:", error.message);
+    res.status(500).json({ message: "Erro no servidor", error: error.message });
   }
 });
 

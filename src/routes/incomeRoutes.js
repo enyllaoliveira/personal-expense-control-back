@@ -29,7 +29,7 @@ router.get("/receitas", verifyToken, async (req, res) => {
   }
 });
 router.post("/receitas", verifyToken, async (req, res) => {
-  const { amount, description, receipt_date } = req.body;
+  const { amount, description, receipt_date, isRecurrent } = req.body;
   const userId = req.userId;
 
   if (!userId) {
@@ -38,11 +38,13 @@ router.post("/receitas", verifyToken, async (req, res) => {
 
   try {
     const sqlQuery = `
-      INSERT INTO receitas (user_id, amount, description, date, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING *;
+      INSERT INTO receitas (
+        user_id, amount, description, date, created_at, updated_at, is_recurrent
+      ) VALUES ($1, $2, $3, $4, NOW(), NOW(), $5) RETURNING *;
     `;
 
-    const values = [userId, amount, description, receipt_date];
+    const values = [userId, amount, description, receipt_date, isRecurrent];
+
     const result = await query(sqlQuery, values);
 
     res.status(201).json(result.rows[0]);
@@ -53,11 +55,13 @@ router.post("/receitas", verifyToken, async (req, res) => {
 });
 router.put("/receitas/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
-  const { amount, description, receipt_date } = req.body;
+  const { amount, description, receipt_date, is_recurrent } = req.body;
+
   if (
     amount === undefined &&
     description === undefined &&
-    receipt_date === undefined
+    receipt_date === undefined &&
+    is_recurrent === undefined
   ) {
     return res
       .status(400)
@@ -81,9 +85,12 @@ router.put("/receitas/:id", verifyToken, async (req, res) => {
       fields.push(`date = $${index++}`);
       values.push(receipt_date);
     }
+    if (is_recurrent !== undefined) {
+      fields.push(`is_recurrent = $${index++}`);
+      values.push(is_recurrent);
+    }
 
     values.push(id);
-
     const sqlQuery = `
       UPDATE receitas
       SET ${fields.join(", ")}, updated_at = NOW()
