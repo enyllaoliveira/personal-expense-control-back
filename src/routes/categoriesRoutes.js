@@ -4,8 +4,8 @@ import { verifyToken } from "./userRoutes.js";
 
 const router = express.Router();
 
-router.post("/categorias", verifyToken, async (req, res) => {
-  const { nome, tipo, descricao_extra } = req.body;
+router.post("/categories", verifyToken, async (req, res) => {
+  const { name, type, extra_description } = req.body;
   const userId = req.userId;
 
   if (!userId) {
@@ -14,10 +14,10 @@ router.post("/categorias", verifyToken, async (req, res) => {
 
   try {
     const checkQuery = `
-    SELECT * FROM categorias 
-    WHERE nome = $1 AND (user_id = $2 OR user_id IS NULL);
+    SELECT * FROM categories 
+    WHERE name = $1 AND (user_id = $2 OR user_id IS NULL);
   `;
-    const checkResult = await query(checkQuery, [nome, userId]);
+    const checkResult = await query(checkQuery, [name, userId]);
 
     if (checkResult.rows.length > 0) {
       return res
@@ -26,10 +26,10 @@ router.post("/categorias", verifyToken, async (req, res) => {
     }
 
     const sqlQuery = `
-    INSERT INTO categorias (nome, tipo, descricao_extra, user_id, criado_em)
+    INSERT INTO categories (name, type, extra_description, user_id, created_at)
     VALUES ($1, $2, $3, $4, NOW()) RETURNING *;
   `;
-    const values = [nome, tipo, descricao_extra, userId];
+    const values = [name, type, extra_description, userId];
     const result = await query(sqlQuery, values);
 
     res.status(201).json(result.rows[0]);
@@ -39,11 +39,11 @@ router.post("/categorias", verifyToken, async (req, res) => {
   }
 });
 
-router.put("/despesas/:id", verifyToken, async (req, res) => {
+router.put("/expenses/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
-  const { descricao, valor, data_pagamento, categoria_id } = req.body;
+  const { description, amount, payment_date, category_id } = req.body;
 
-  if (!descricao || !valor || !data_pagamento || !categoria_id) {
+  if (!description || !valor || !payment_date || !category_id) {
     return res.status(400).json({
       message: "Todos os campos são obrigatórios.",
     });
@@ -51,13 +51,13 @@ router.put("/despesas/:id", verifyToken, async (req, res) => {
 
   try {
     const sqlQuery = `
-      UPDATE despesas
-      SET descricao = $1, valor = $2, data_pagamento = $3, categoria_id = $4, atualizado_em = NOW()
+      UPDATE expenses
+      SET description = $1, amount = $2, payment_date = $3, category_id = $4, updated_at = NOW()
       WHERE id = $5
       RETURNING *;
     `;
 
-    const values = [descricao, valor, data_pagamento, categoria_id, id];
+    const values = [description, amount, payment_date, category_id, id];
 
     const result = await query(sqlQuery, values);
 
@@ -74,12 +74,12 @@ router.put("/despesas/:id", verifyToken, async (req, res) => {
   }
 });
 
-router.delete("/categorias/:id", verifyToken, async (req, res) => {
+router.delete("/categories/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
 
   try {
     const sql = `
-    DELETEFROM categorias WHERE id = $1 RETURNING *;
+    DELETEFROM categories WHERE id = $1 RETURNING *;
     `;
     const values = [id];
     const result = await query(sql, values);
@@ -90,11 +90,11 @@ router.delete("/categorias/:id", verifyToken, async (req, res) => {
 
     res.status(200).json({
       message: "Categoria excluída com sucesso.",
-      categoria: result.rows[0],
+      category: result.rows[0],
     });
     res.status(200).json({
       message: "Categoria excluída com sucesso.",
-      categoria: result.rows[0],
+      category: result.rows[0],
     });
   } catch (error) {
     console.error("Erro ao excluir categoria:", error.message);
@@ -102,16 +102,16 @@ router.delete("/categorias/:id", verifyToken, async (req, res) => {
   }
 });
 
-router.get("/categorias", verifyToken, async (req, res) => {
+router.get("/categories", verifyToken, async (req, res) => {
   const userId = req.userId;
 
   try {
-    const queryCategorias = `
+    const queryCategories = `
       SELECT * 
-      FROM categorias 
+      FROM categories 
       WHERE user_id IS NULL OR user_id = $1
     `;
-    const result = await query(queryCategorias, [userId]);
+    const result = await query(queryCategories, [userId]);
 
     res.status(200).json(result.rows);
   } catch (error) {

@@ -7,14 +7,14 @@ dotenv.config();
 
 const router = express.Router();
 
-router.get("/receitas", verifyToken, async (req, res) => {
+router.get("/incomes", verifyToken, async (req, res) => {
   const userId = req.userId;
   if (!userId) {
     return res.status(400).json({ message: "ID do usuário é obrigatório." });
   }
   try {
     const result = await query(
-      "SELECT * FROM receitas WHERE user_id = $1 ORDER BY date DESC",
+      "SELECT * FROM incomes WHERE user_id = $1 ORDER BY date DESC",
       [userId]
     );
 
@@ -24,11 +24,11 @@ router.get("/receitas", verifyToken, async (req, res) => {
 
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Erro ao buscar receitas:", error.message);
+    console.error("Erro ao buscar incomes:", error.message);
     res.status(500).json({ message: "Erro no servidor." });
   }
 });
-router.post("/receitas", verifyToken, async (req, res) => {
+router.post("/incomes", verifyToken, async (req, res) => {
   const { amount, description, receipt_date, isRecurrent } = req.body;
   const userId = req.userId;
 
@@ -38,7 +38,7 @@ router.post("/receitas", verifyToken, async (req, res) => {
 
   try {
     const sqlQuery = `
-      INSERT INTO receitas (
+      INSERT INTO incomes (
         user_id, amount, description, date, created_at, updated_at, is_recurrent
       ) VALUES ($1, $2, $3, $4, NOW(), NOW(), $5) RETURNING *;
     `;
@@ -53,7 +53,7 @@ router.post("/receitas", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Erro no servidor." });
   }
 });
-router.put("/receitas/:id", verifyToken, async (req, res) => {
+router.put("/incomes/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { amount, description, receipt_date, is_recurrent } = req.body;
 
@@ -92,7 +92,7 @@ router.put("/receitas/:id", verifyToken, async (req, res) => {
 
     values.push(id);
     const sqlQuery = `
-      UPDATE receitas
+      UPDATE incomes
       SET ${fields.join(", ")}, updated_at = NOW()
       WHERE id = $${index}
       RETURNING *;
@@ -114,12 +114,12 @@ router.put("/receitas/:id", verifyToken, async (req, res) => {
   }
 });
 
-router.delete("/receitas/:id", verifyToken, async (req, res) => {
+router.delete("/incomes/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
 
   try {
     const sql = `
-      DELETE FROM receitas WHERE id = $1 RETURNING *;
+      DELETE FROM incomes WHERE id = $1 RETURNING *;
     `;
     const values = [id];
     const result = await query(sql, values);

@@ -19,7 +19,6 @@ export const verifyToken = (req, res, next) => {
     if (err) return res.status(403).json({ message: "Token inválido." });
 
     req.userId = decoded.id;
-    console.log("User ID no middleware:", req.userId);
     next();
   });
 };
