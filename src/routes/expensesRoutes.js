@@ -130,14 +130,24 @@ router.put("/expenses/:id", verifyToken, async (req, res) => {
     category_id,
     new_category,
     payment_type,
+    is_recurrent,
+    installment_count,
   } = req.body;
+
+  if (is_recurrent && installment_count) {
+    return res.status(400).json({
+      message: "A despesa não pode ser recorrente e dividida ao mesmo tempo.",
+    });
+  }
 
   if (
     description === undefined &&
     amount === undefined &&
     payment_date === undefined &&
     category_id === undefined &&
-    payment_type === undefined
+    payment_type === undefined &&
+    is_recurrent === undefined &&
+    installment_count === undefined
   ) {
     return res.status(400).json({ message: "Nenhum campo foi alterado." });
   }
@@ -205,6 +215,15 @@ router.put("/expenses/:id", verifyToken, async (req, res) => {
       values.push(payment_type);
     }
 
+    if (is_recurrent !== undefined) {
+      fields.push(`is_recurrent = $${index++}`);
+      values.push(is_recurrent);
+    }
+
+    if (installment_count !== undefined) {
+      fields.push(`installment_count = $${index++}`);
+      values.push(installment_count);
+    }
     values.push(id);
 
     const sqlQuery = `
