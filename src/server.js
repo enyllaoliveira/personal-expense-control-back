@@ -2,11 +2,12 @@ import express from "express";
 import incomeRoutes from "./routes/incomeRoutes.js";
 import expensesRoutes from "./routes/expensesRoutes.js";
 import categoriesRoutes from "./routes/categoriesRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import filtherMonthRoutes from "./routes/filterMonthRoutes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 
@@ -29,6 +30,8 @@ app.use("/api", categoriesRoutes);
 app.use("/api", incomeRoutes);
 
 app.use("/api", userRoutes);
+
+app.use("/api", filtherMonthRoutes);
 
 const PORT = process.env.PORT || 3000;
 
