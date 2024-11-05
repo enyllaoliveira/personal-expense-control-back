@@ -34,7 +34,7 @@ export const createIncome = async (
         ) VALUES ($1, $2, $3, $4, NOW(), NOW(), $5) RETURNING *;
       `;
 
-  const values = [amount, description, receipt_date, isRecurrent, userId];
+  const values = [userId, amount, description, receipt_date, isRecurrent];
 
   const result = await query(sqlQuery, values);
 

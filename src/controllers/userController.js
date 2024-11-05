@@ -65,7 +65,7 @@ export const handleLogin = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 1000 * 60 * 60,
+      maxAge: 1000 * 60 * 60 * 24 * 7,
     });
 
     res.cookie("refreshToken", refreshToken, {
@@ -162,7 +162,7 @@ export const handleRefreshToken = (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 1000 * 60 * 60,
+      maxAge: 1000 * 60 * 60 * 24 * 7,
     });
 
     res.status(200).json({ message: "Token renovado com sucesso" });

@@ -27,16 +27,32 @@ export const handleCreateIncome = async (req, res) => {
     if (!userId) {
       return res.status(400).json({ message: "ID do usuário é obrigatório." });
     }
+    if (
+      amount === undefined ||
+      description === undefined ||
+      receipt_date === undefined
+    ) {
+      return res.status(400).json({
+        message: "Todos os campos obrigatórios devem ser preenchidos.",
+      });
+    }
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) {
+      return res
+        .status(400)
+        .json({ message: "O campo 'amount' deve ser um número válido." });
+    }
 
     const response = await createIncome(
-      amount,
+      numericAmount,
       description,
       receipt_date,
-      isRecurrent
+      isRecurrent,
+      userId
     );
     res.status(201).json(response);
   } catch (error) {
-    console.error("Erro ao criar receitas", error.message);
+    console.error("Erro ao criar receitas:", error.message);
     res.status(400).json({ error: error.message });
   }
 };
