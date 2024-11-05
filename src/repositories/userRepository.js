@@ -24,7 +24,7 @@ export const getUser = async () => {
   }
 };
 
-export const getUserByEmail = async (email) => {
+export const login = async (email) => {
   try {
     const result = await query("SELECT * FROM users WHERE email = $1", [email]);
     return result.rows[0];

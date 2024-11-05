@@ -1,0 +1,84 @@
+import {
+  createIncome,
+  getIncomesById,
+  updateIncome,
+  deleteIncome,
+} from "../repositories/incomesRepository.js";
+
+export const handleGetIncomeById = async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(400).json({ message: "ID do usuário é obrigatório." });
+    }
+    const response = await getIncomesById(userId);
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Erro ao carregar receitas:", error.message);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const handleCreateIncome = async (req, res) => {
+  try {
+    const { amount, description, receipt_date, isRecurrent } = req.body;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "ID do usuário é obrigatório." });
+    }
+
+    const response = await createIncome(
+      amount,
+      description,
+      receipt_date,
+      isRecurrent
+    );
+    res.status(201).json(response);
+  } catch (error) {
+    console.error("Erro ao criar receitas", error.message);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const handleUpdateIncome = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, description, receipt_date, is_recurrent } = req.body;
+
+    if (
+      amount === undefined &&
+      description === undefined &&
+      receipt_date === undefined &&
+      is_recurrent === undefined
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Pelo menos um campo deve ser atualizado." });
+    }
+
+    const response = await updateIncome(
+      id,
+      amount,
+      description,
+      receipt_date,
+      is_recurrent
+    );
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Erro ao atualizar receitas:", error.message);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const handleDeleteIncome = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const response = await deleteIncome(id);
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Erro ao deletar receitas:", error.message);
+    res.status(400).json({ error: error.message });
+  }
+};

@@ -2,14 +2,14 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import {
   createUser,
+  login,
   getUser,
   getUserById,
-  deleteUser,
   updateUser,
-  getUserByEmail,
-} from "../services/userService.js";
+  deleteUser,
+} from "../repositories/userRepository.js";
 
-export const createUserController = async (req, res) => {
+export const handleCreateUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
     const saltRounds = 10;
@@ -22,7 +22,7 @@ export const createUserController = async (req, res) => {
   }
 };
 
-export const getUsersController = async (req, res) => {
+export const handleGetUsers = async (req, res) => {
   try {
     const users = await getUser();
     return res.status(200).json(users);
@@ -35,11 +35,11 @@ export const getUsersController = async (req, res) => {
   }
 };
 
-export const getUserByEmailController = async (req, res) => {
+export const handleLogin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await getUserByEmail(email);
+    const user = await login(email);
     if (!user) {
       return res.status(404).json({ message: "Usuário não encontrado" });
     }
@@ -87,7 +87,7 @@ export const getUserByEmailController = async (req, res) => {
     });
   }
 };
-export const getUserByIdController = async (req, res) => {
+export const handleGetUserById = async (req, res) => {
   const { id } = req.params;
   try {
     const user = await getUserById(id);
@@ -101,12 +101,12 @@ export const getUserByIdController = async (req, res) => {
   }
 };
 
-export const updateUserController = async (req, res) => {
+export const handleUpdateUser = async (req, res) => {
   const { id } = req.params;
   const { name, email, password } = req.body;
   try {
-    const updateUser = await updateUser(id, name, email, password);
-    return res.status(200).json(updateUser);
+    const handleUpdateUser = await updateUser(id, name, email, password);
+    return res.status(200).json(handleUpdateUser);
   } catch (error) {
     if (error instanceof Error) {
       console.error("Erro ao atualizar usuário por ID:", error.message);
@@ -116,16 +116,61 @@ export const updateUserController = async (req, res) => {
   }
 };
 
-export const deleteUserController = async (req, res) => {
+export const handleDeleteUser = async (req, res) => {
   const { id } = req.params;
   try {
-    const deleteUser = await deleteUser(id);
-    return res.status(200).json(deleteUser);
+    const handleDeleteUser = await deleteUser(id);
+    return res.status(200).json(handleDeleteUser);
   } catch (error) {
     if (error instanceof Error) {
       console.error("Erro ao deletar usuário por ID:", error.message);
       return res.status(500).json({ error: error.message });
     }
     return res.status(500).json({ error: "Erro desconhecido" });
+  }
+};
+
+export const handleLogout = (req, res) => {
+  try {
+    res.clearCookie("token", { httpOnly: true, sameSite: "strict" });
+    res.clearCookie("refreshToken", { httpOnly: true, sameSite: "strict" });
+
+    return res.status(200).json({ message: "Logout realizado com sucesso" });
+  } catch (error) {
+    console.error("Erro ao deslogar:", error.message);
+    return res.status(500).json({ message: "Erro ao deslogar" });
+  }
+};
+
+export const handleRefreshToken = (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(403).json({ message: "Refresh token não encontrado" });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+    const newToken = jwt.sign(
+      { id: decoded.id, email: decoded.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.cookie("token", newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 1000 * 60 * 60,
+    });
+
+    res.status(200).json({ message: "Token renovado com sucesso" });
+  } catch (error) {
+    console.error("Erro ao renovar token:", error.message);
+    res.status(403).json({
+      message: "Refresh token inválido ou expirado",
+      error: error.message,
+    });
   }
 };
