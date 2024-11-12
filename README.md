@@ -4,7 +4,7 @@ Este repositório contém a implementação do backend para o aplicativo de cont
 
 ## Funcionalidades
 
-Suas principais funcionalidades são voltadas à(aos):
+Suas principais funcionalidades são voltadas à(ao):
 
 - Gerenciamento de Usuários: cadastro, autenticação e gerenciamento de perfis de usuários;
 - Registro de Transações: adição, edição e exclusão de despesas e receitas;
