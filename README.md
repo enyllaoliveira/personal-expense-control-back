@@ -6,10 +6,10 @@ Este repositório contém a implementação do backend para o aplicativo de cont
 
 Suas principais funcionalidades são voltadas à(ao):
 
-- Gerenciamento de usuários: cadastro, autenticação e gerenciamento de perfis de usuários;
-- Registro de transações: adição, edição e exclusão de despesas e receitas;
-- Categorias personalizadas: criação e gerenciamento de categorias para classificar transações; e
-- Relatórios financeiros: geração de relatórios e resumos financeiros para análise de despesas e receitas.
+- **Gerenciamento de usuários**: cadastro, autenticação e gerenciamento de perfis de usuários;
+- **Registro de transações**: adição, edição e exclusão de despesas e receitas;
+- **Categoria personalizada**: criação e gerenciamento de categorias para classificar transações; e
+- **Relatórios financeiros**: geração de relatórios e resumos financeiros para análise de despesas e receitas.
 
 ## Stack utilizada
 
@@ -29,7 +29,7 @@ Clone o projeto
 Entre no diretório do projeto
 
 ```bash
-  cd personal-expense-control
+  cd personal-expense-control-back
 ```
 
 Instale as dependências
