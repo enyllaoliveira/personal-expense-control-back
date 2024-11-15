@@ -29,16 +29,52 @@ export const createIncome = async (
   }
 
   const sqlQuery = `
-        INSERT INTO incomes (
-          user_id, amount, description, date, created_at, updated_at, is_recurrent
-        ) VALUES ($1, $2, $3, $4, NOW(), NOW(), $5) RETURNING *;
-      `;
+    INSERT INTO incomes (
+      user_id, amount, description, date, created_at, updated_at, is_recurrent
+    ) VALUES ($1, $2, $3, $4, NOW(), NOW(), $5) RETURNING *;
+  `;
 
   const values = [userId, amount, description, receipt_date, isRecurrent];
 
   const result = await query(sqlQuery, values);
+  const createdIncome = result.rows[0];
 
-  return result.rows[0];
+  if (isRecurrent) {
+    const recordsToInsert = [];
+    for (let i = 1; i <= 12; i++) {
+      const nextDate = new Date(receipt_date);
+      nextDate.setMonth(nextDate.getMonth() + i);
+
+      recordsToInsert.push([
+        userId,
+        amount,
+        description,
+        nextDate,
+        new Date(),
+        new Date(),
+        isRecurrent,
+      ]);
+    }
+
+    const recurringQuery = `
+      INSERT INTO incomes (
+        user_id, amount, description, date, created_at, updated_at, is_recurrent
+      ) VALUES ${recordsToInsert
+        .map(
+          (_, index) =>
+            `($${index * 7 + 1}, $${index * 7 + 2}, $${index * 7 + 3}, $${
+              index * 7 + 4
+            }, $${index * 7 + 5}, $${index * 7 + 6}, $${index * 7 + 7})`
+        )
+        .join(", ")} RETURNING *;
+    `;
+
+    const flatValues = recordsToInsert.flat();
+
+    await query(recurringQuery, flatValues);
+  }
+
+  return createdIncome;
 };
 
 export const updateIncome = async (
