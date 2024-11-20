@@ -33,6 +33,10 @@ app.use("/api", userRoutes);
 
 app.use("/api", filtherMonthRoutes);
 
+app.get("/", (req, res) => {
+  res.send("Backend rodando...");
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
