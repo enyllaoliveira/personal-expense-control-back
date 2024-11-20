@@ -1,15 +1,11 @@
 import pkg from "pg";
 import dotenv from "dotenv";
+
 dotenv.config();
-import { DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER } from "../env.js";
 const { Pool } = pkg;
 
 const pool = new Pool({
-  user: DB_USER,
-  host: DB_HOST,
-  database: DB_NAME,
-  password: DB_PASSWORD + "",
-  port: DB_PORT,
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
