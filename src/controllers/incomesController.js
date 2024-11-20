@@ -56,16 +56,24 @@ export const handleCreateIncome = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
-
 export const handleUpdateIncome = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { amount, description, receipt_date, is_recurrent } = req.body;
+    const { amount, description, date, is_recurrent } = req.body;
+    if (date) {
+      const parsedDate = Date.parse(date);
+      if (isNaN(parsedDate)) {
+        console.error("Erro: 'date' é inválido.");
+        return res.status(400).json({
+          message:
+            "O valor de 'date' deve ser uma data válida no formato YYYY-MM-DD.",
+        });
+      }
+    }
 
     if (
       amount === undefined &&
       description === undefined &&
-      receipt_date === undefined &&
+      date === undefined &&
       is_recurrent === undefined
     ) {
       return res
@@ -74,12 +82,13 @@ export const handleUpdateIncome = async (req, res) => {
     }
 
     const response = await updateIncome(
-      id,
       amount,
       description,
-      receipt_date,
-      is_recurrent
+      date,
+      is_recurrent,
+      req.params.id
     );
+
     res.status(200).json(response);
   } catch (error) {
     console.error("Erro ao atualizar receitas:", error.message);

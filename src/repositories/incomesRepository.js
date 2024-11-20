@@ -20,7 +20,7 @@ export const getIncomesById = async (userId) => {
 export const createIncome = async (
   amount,
   description,
-  receipt_date,
+  date,
   isRecurrent,
   userId
 ) => {
@@ -34,7 +34,7 @@ export const createIncome = async (
     ) VALUES ($1, $2, $3, $4, NOW(), NOW(), $5) RETURNING *;
   `;
 
-  const values = [userId, amount, description, receipt_date, isRecurrent];
+  const values = [userId, amount, description, date, isRecurrent];
 
   const result = await query(sqlQuery, values);
   const createdIncome = result.rows[0];
@@ -42,7 +42,7 @@ export const createIncome = async (
   if (isRecurrent) {
     const recordsToInsert = [];
     for (let i = 1; i <= 12; i++) {
-      const nextDate = new Date(receipt_date);
+      const nextDate = new Date(date);
       nextDate.setMonth(nextDate.getMonth() + i);
 
       recordsToInsert.push([
@@ -80,14 +80,14 @@ export const createIncome = async (
 export const updateIncome = async (
   amount,
   description,
-  receipt_date,
+  date,
   is_recurrent,
   id
 ) => {
   if (
     amount === undefined &&
     description === undefined &&
-    receipt_date === undefined &&
+    date === undefined &&
     is_recurrent === undefined
   ) {
     throw new Error("Pelo menos um campo deve ser atualizado.");
@@ -98,29 +98,50 @@ export const updateIncome = async (
   let index = 1;
 
   if (amount !== undefined) {
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount)) {
+      throw new Error("O valor de 'amount' deve ser um número válido.");
+    }
     fields.push(`amount = $${index++}`);
-    values.push(parseFloat(amount));
+    values.push(parsedAmount);
   }
   if (description !== undefined) {
     fields.push(`description = $${index++}`);
     values.push(description);
   }
-  if (receipt_date !== undefined) {
+
+  console.log("Valor inicial recebido para 'date':", date);
+  if (date !== undefined) {
+    const parsedDate = Date.parse(date);
+    console.log("Timestamp gerado para 'date':", parsedDate);
+    if (isNaN(parsedDate)) {
+      console.error("Erro: 'date' é inválido.");
+      throw new Error(
+        "O valor de 'date' deve ser uma data válida no formato YYYY-MM-DD."
+      );
+    }
+    const formattedDate = new Date(parsedDate).toISOString().split("T")[0];
+    console.log("Data formatada para o banco:", formattedDate);
     fields.push(`date = $${index++}`);
-    values.push(receipt_date);
+    values.push(formattedDate);
   }
   if (is_recurrent !== undefined) {
+    if (typeof is_recurrent !== "boolean") {
+      throw new Error(
+        "O valor de 'is_recurrent' deve ser um booleano (true ou false)."
+      );
+    }
     fields.push(`is_recurrent = $${index++}`);
     values.push(is_recurrent);
   }
 
   values.push(id);
   const sqlQuery = `
-        UPDATE incomes
-        SET ${fields.join(", ")}, updated_at = NOW()
-        WHERE id = $${index}
-        RETURNING *;
-      `;
+    UPDATE incomes
+    SET ${fields.join(", ")}, updated_at = NOW()
+    WHERE id = $${index}
+    RETURNING *;
+  `;
 
   const result = await query(sqlQuery, values);
 
