@@ -15,9 +15,14 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://financial-control-beryl.vercel.app",
+];
+
 app.use(
   cors({
-    origin: "https://financial-control-beryl.vercel.app",
+    origin: allowedOrigins,
     credentials: true,
   })
 );
