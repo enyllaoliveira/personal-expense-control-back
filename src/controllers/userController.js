@@ -67,6 +67,7 @@ export const handleLogin = async (req, res) => {
       sameSite: "strict",
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
+    console.log("Cookie token configurado com sucesso!");
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
@@ -74,6 +75,7 @@ export const handleLogin = async (req, res) => {
       sameSite: "strict",
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
+    console.log("Cookie refresh configurado com sucesso!");
 
     return res.status(200).json({
       message: "Login realizado com sucesso",
