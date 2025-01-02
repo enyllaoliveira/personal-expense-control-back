@@ -11,14 +11,14 @@ import {
 
 const router = express.Router();
 
-router.post("/expenses", verifyToken, handleCreateExpense);
+router.post("/", verifyToken, handleCreateExpense);
 
-router.get("/expenses/:id", verifyToken, handleGetExpenseById);
+router.get("/:id", verifyToken, handleGetExpenseById);
 
-router.put("/expenses/:id", verifyToken, handleUpdateExpense);
+router.put("/:id", verifyToken, handleUpdateExpense);
 
-router.delete("/expenses/:id", verifyToken, handleDeleteExpense);
+router.delete("/:id", verifyToken, handleDeleteExpense);
 
-router.get("/expenses", verifyToken, handleGetExpense);
+router.get("/", verifyToken, handleGetExpense);
 
 export default router;
