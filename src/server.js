@@ -38,7 +38,7 @@ app.use("/api/expenses", expensesRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/incomes", incomeRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/filter-month", filterMonthRoutes);
+app.use("/api", filterMonthRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend rodando...");
