@@ -15,6 +15,7 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+// ROTAS
 const allowedOrigins = [
   "http://localhost:5173",
   "https://financial-control-beryl.vercel.app",
