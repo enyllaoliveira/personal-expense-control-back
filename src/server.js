@@ -22,19 +22,14 @@ app.use((req, res, next) => {
   next();
 });
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",")
-  : ["http://localhost:5173", "https://financial-control-beryl.vercel.app"];
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://financial-control-beryl.vercel.app",
+];
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Origem não permitida pelo CORS"));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
   })
 );
