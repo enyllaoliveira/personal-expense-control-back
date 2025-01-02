@@ -15,15 +15,26 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// ROTAS
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://financial-control-beryl.vercel.app",
-];
+app.use((req, res, next) => {
+  console.log("Origem da requisição:", req.headers.origin);
+  console.log("Cookies recebidos:", req.cookies);
+  console.log("Rota acessada:", req.originalUrl);
+  next();
+});
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:5173", "https://financial-control-beryl.vercel.app"];
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Origem não permitida pelo CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -36,6 +47,13 @@ app.use("/api/filter-month", filterMonthRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend rodando...");
+});
+
+app.use((err, req, res, next) => {
+  console.error("Erro no servidor:", err.message);
+  res
+    .status(500)
+    .json({ message: "Erro interno no servidor", error: err.message });
 });
 
 const PORT = process.env.PORT || 3000;
